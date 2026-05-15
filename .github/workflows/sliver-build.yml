@@ -1,0 +1,55 @@
+name: Compile Sliver C2 (Ubuntu 22.04 Container)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-sliver:
+    runs-on: ubuntu-latest 
+    
+    container:
+      image: ubuntu:22.04
+
+    steps:
+    - name: Initialize Environment & Install Dependencies
+      run: |
+        apt-get update
+        apt-get install -y curl git make mingw-w64 binutils-mingw-w64 g++-mingw-w64 wget
+
+    - name: Install Go 1.25+
+      run: |
+        wget https://go.dev/dl/go1.25.0.linux-amd64.tar.gz
+        rm -rf /usr/local/go && tar -C /usr/local -xzf go1.25.0.linux-amd64.tar.gz
+        echo "/usr/local/go/bin" >> $GITHUB_PATH
+        rm go1.25.0.linux-amd64.tar.gz
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+
+    - name: Clone Sliver Source
+      run: |
+        git clone https://github.com/BishopFox/sliver.git
+        cd sliver
+ 
+
+    - name: Build Sliver Server & Client
+      run: |
+        cd sliver
+        mkdir -p ../sliver-tmp
+        export TMPDIR=$(pwd)/../sliver-tmp
+        
+        export PATH=$PATH:/usr/local/go/bin
+        go version
+        
+        make
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: sliver-ubuntu22.04-binaries
+        path: |
+          sliver/sliver-server*
+          sliver/sliver-client*
